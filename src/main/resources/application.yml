@@ -15,3 +15,11 @@ spring:
 
 mybatis:
   mapper-locations: classpath*:mapper/*Mapper.xml
+
+app:
+  customer-app-id: ${CUSTOMER_APP_ID:wx2cc993502d30608f}
+  admin-app-id: ${ADMIN_APP_ID:wx6af64e050bd8565d}
+  admin-openids: ${ADMIN_OPENIDS:}
+  admin-app-secret: ${ADMIN_APP_SECRET:}
+  subscription:
+    template-id: ${ORDER_SUBSCRIBE_TEMPLATE_ID:ZJVSCC8CF35EJ9adVkU6W6eMUaz5EHMoVBdF3dGAx4E}

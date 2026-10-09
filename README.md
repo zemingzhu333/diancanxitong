@@ -1,122 +1,30 @@
-# wxcloudrun-springboot
-[![GitHub license](https://img.shields.io/github/license/WeixinCloud/wxcloudrun-express)](https://github.com/WeixinCloud/wxcloudrun-express)
-![GitHub package.json dependency version (prod)](https://img.shields.io/badge/maven-3.6.0-green)
-![GitHub package.json dependency version (prod)](https://img.shields.io/badge/jdk-11-green)
+# 锅锅堂食 Spring Boot 后端
 
-微信云托管 Java Springboot 框架模版，实现简单的计数器读写接口，使用云托管 MySQL 读写、记录计数值。
+基于微信云托管 Spring Boot + MySQL 模板扩展。部署目标沿用 CloudBase 环境 `prod-d1dg78eb70011f17b`、服务 `springboot-hmrv`。原有 `/api/count` 示例仍保留。
 
-![](https://qcloudimg.tencent-cloud.cn/raw/be22992d297d1b9a1a5365e606276781.png)
+## 首次初始化
 
+1. 在服务所连接的 MySQL 数据库执行 `src/main/resources/ordering-schema.sql`。
+2. 顾客端 AppID 为 `wx2cc993502d30608f`，管理端 AppID 为 `wx6af64e050bd8565d`；两者都须关联到该 CloudBase 环境。
+3. 将此代码部署到现有环境和服务后，打开管理端“门店设置”，复制当前管理员 OpenID。
+4. 在 CloudRun 服务环境变量中将 `ADMIN_OPENIDS` 设置为管理员 OpenID；多人时用英文逗号分隔。
+5. 配置 CloudRun 环境变量 `ADMIN_APP_SECRET`（「小猪厨房」AppSecret）；模板 ID 默认为 `ZJVSCC8CF35EJ9adVkU6W6eMUaz5EHMoVBdF3dGAx4E`，如需覆盖可设置 `ORDER_SUBSCRIBE_TEMPLATE_ID`。不要将 AppSecret 写入小程序或提交到代码仓库。
+6. CloudBase 云存储配置菜品图片规则：`dish-covers/` 下文件允许读取；写入和删除仅允许 `ADMIN_OPENIDS` 中的管理员 OpenID。管理端上传时使用 `dish-covers/` 路径，数据库只保存 `fileID`。顾客端通过 `wx.cloud.getTempFileURL` 解析显示图片。
+7. 生产环境关闭 CloudRun 公网访问，使用小程序 `wx.cloud.callContainer` 私有链路。
 
-## 快速开始
-前往 [微信云托管快速开始页面](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/basic/guide.html)，选择相应语言的模板，根据引导完成部署。
+管理员在「小猪厨房」订单页点击“订阅新单通知”并同意后，获得一次订阅额度。一次授权用于一次新订单通知；需要继续收通知时，再次点击并授权。后端仅在订单事务提交后调用微信接口，发送失败不会撤销已经创建的订单。
 
-## 本地调试
-下载代码在本地调试，请参考[微信云托管本地调试指南](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/guide/debug/)。
-
-## 实时开发
-代码变动时，不需要重新构建和启动容器，即可查看变动后的效果。请参考[微信云托管实时开发指南](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/guide/debug/dev.html)
-
-## Dockerfile最佳实践
-请参考[如何提高项目构建效率](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/scene/build/speed.html)
-
-## 目录结构说明
-~~~
-.
-├── Dockerfile                      Dockerfile 文件
-├── LICENSE                         LICENSE 文件
-├── README.md                       README 文件
-├── container.config.json           模板部署「服务设置」初始化配置（二开请忽略）
-├── mvnw                            mvnw 文件，处理mevan版本兼容问题
-├── mvnw.cmd                        mvnw.cmd 文件，处理mevan版本兼容问题
-├── pom.xml                         pom.xml文件
-├── settings.xml                    maven 配置文件
-├── springboot-cloudbaserun.iml     项目配置文件
-└── src                             源码目录
-    └── main                        源码主目录
-        ├── java                    业务逻辑目录
-        └── resources               资源文件目录
-~~~
-
-
-## 服务 API 文档
-
-### `GET /api/count`
-
-获取当前计数
-
-#### 请求参数
-
-无
-
-#### 响应结果
-
-- `code`：错误码
-- `data`：当前计数值
-
-##### 响应结果示例
+云存储规则示意（将占位 OpenID 替换为管理员真实 OpenID，并为每位管理员添加一条判断）：
 
 ```json
 {
-  "code": 0,
-  "data": 42
+  "read": "/^dish-covers\\//.test(resource.path)",
+  "write": "auth != null && (auth.openid == '管理员OpenID1' || auth.openid == '管理员OpenID2')"
 }
 ```
 
-#### 调用示例
+详细数据结构和 API 见 `../docs/backend-contract.md`。
 
-```
-curl https://<云托管服务域名>/api/count
-```
+## 注意
 
-
-
-### `POST /api/count`
-
-更新计数，自增或者清零
-
-#### 请求参数
-
-- `action`：`string` 类型，枚举值
-  - 等于 `"inc"` 时，表示计数加一
-  - 等于 `"clear"` 时，表示计数重置（清零）
-
-##### 请求参数示例
-
-```
-{
-  "action": "inc"
-}
-```
-
-#### 响应结果
-
-- `code`：错误码
-- `data`：当前计数值
-
-##### 响应结果示例
-
-```json
-{
-  "code": 0,
-  "data": 42
-}
-```
-
-#### 调用示例
-
-```
-curl -X POST -H 'content-type: application/json' -d '{"action": "inc"}' https://<云托管服务域名>/api/count
-```
-
-## 使用注意
-如果不是通过微信云托管控制台部署模板代码，而是自行复制/下载模板代码后，手动新建一个服务并部署，需要在「服务设置」中补全以下环境变量，才可正常使用，否则会引发无法连接数据库，进而导致部署失败。
-- MYSQL_ADDRESS
-- MYSQL_PASSWORD
-- MYSQL_USERNAME
-以上三个变量的值请按实际情况填写。如果使用云托管内MySQL，可以在控制台MySQL页面获取相关信息。
-
-
-## License
-
-[MIT](./LICENSE)
+这个仓库配置了 GitHub 推送自动部署。当前工作在本地分支 `codex/ordering-sync`，尚未提交、推送或部署。完成检查并审核后，再决定是否合并到自动部署分支。
