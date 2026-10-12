@@ -88,7 +88,7 @@ public class OrderingController {
     List<Map<String, Object>> snapshots = new ArrayList<>();
     for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
       List<Map<String, Object>> matches = jdbc.query(
-          "SELECT id, category, name, description, price_cents, emoji, cover FROM dishes WHERE id = ? AND on_sale = 1",
+          "SELECT id, category, name, description, price_cents, emoji, cover, on_sale FROM dishes WHERE id = ? AND on_sale = 1",
           (rs, rowNum) -> dishRow(rs), entry.getKey());
       if (matches.isEmpty()) return ApiResponse.error("有菜品已下架，请刷新菜单后重试");
       Map<String, Object> dish = matches.get(0);
