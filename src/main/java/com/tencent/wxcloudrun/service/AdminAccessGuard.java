@@ -18,11 +18,11 @@ public class AdminAccessGuard {
   private String adminOpenids;
 
   public String openid(HttpServletRequest request) {
-    return request.getHeader("X-WX-OPENID");
+    return firstNonBlank(request.getHeader("X-WX-FROM-OPENID"), request.getHeader("X-WX-OPENID"));
   }
 
   public boolean isAdminApp(HttpServletRequest request) {
-    return adminAppId.equals(request.getHeader("X-WX-APPID"));
+    return adminAppId.equals(firstNonBlank(request.getHeader("X-WX-FROM-APPID"), request.getHeader("X-WX-APPID")));
   }
 
   public boolean isAuthorized(HttpServletRequest request) {
@@ -39,5 +39,10 @@ public class AdminAccessGuard {
 
   public boolean isConfigured() {
     return adminOpenids != null && !adminOpenids.trim().isEmpty();
+  }
+
+  private String firstNonBlank(String first, String fallback) {
+    if (first != null && !first.trim().isEmpty()) return first.trim();
+    return fallback == null ? null : fallback.trim();
   }
 }

@@ -226,9 +226,16 @@ public class OrderingController {
   }
 
   private String requireCustomer(HttpServletRequest request) {
-    String appid = request.getHeader("X-WX-APPID");
-    String openid = request.getHeader("X-WX-OPENID");
+    // In a resource-reuse call, CloudBase puts the consumer mini-program identity
+    // in X-WX-FROM-*; ordinary X-WX-* headers may identify the resource owner.
+    String appid = firstNonBlank(request.getHeader("X-WX-FROM-APPID"), request.getHeader("X-WX-APPID"));
+    String openid = firstNonBlank(request.getHeader("X-WX-FROM-OPENID"), request.getHeader("X-WX-OPENID"));
     return customerAppId.equals(appid) && openid != null && !openid.trim().isEmpty() ? openid.trim() : null;
+  }
+
+  private String firstNonBlank(String first, String fallback) {
+    if (first != null && !first.trim().isEmpty()) return first.trim();
+    return fallback == null ? null : fallback.trim();
   }
 
   private boolean requireAdmin(HttpServletRequest request) {
