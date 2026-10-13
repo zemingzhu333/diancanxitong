@@ -136,19 +136,18 @@ public class OrderingController {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("openid", adminAccess.openid(request));
     data.put("authorized", adminAccess.isAuthorized(request));
-    data.put("adminConfigured", adminAccess.isConfigured());
     return ApiResponse.ok(data);
   }
 
   @GetMapping("/admin/dishes")
   public ApiResponse adminDishes(HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     return ApiResponse.ok(dishes(false));
   }
 
   @PostMapping("/admin/dishes")
   public ApiResponse createDish(@RequestBody Map<String, Object> body, HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     String id = "dish-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     String name = stringValue(body.get("name")).trim();
     String category = stringValue(body.get("category")).trim();
@@ -163,7 +162,7 @@ public class OrderingController {
 
   @PutMapping("/admin/dishes/{id}")
   public ApiResponse updateDish(@PathVariable String id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     String name = stringValue(body.get("name")).trim();
     String category = stringValue(body.get("category")).trim();
     int price = integerValue(body.get("price"), 0);
@@ -177,7 +176,7 @@ public class OrderingController {
 
   @PatchMapping("/admin/dishes/{id}/sale")
   public ApiResponse setDishSale(@PathVariable String id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     boolean onSale = Boolean.TRUE.equals(body.get("onSale"));
     int changed = jdbc.update("UPDATE dishes SET on_sale = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", onSale, id);
     return changed == 0 ? ApiResponse.error("菜品不存在") : ApiResponse.ok();
@@ -185,7 +184,7 @@ public class OrderingController {
 
   @GetMapping("/admin/orders")
   public ApiResponse adminOrders(HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     List<Map<String, Object>> orders = jdbc.query(
         "SELECT id, status, note, amount_cents, created_at FROM orders ORDER BY created_at DESC LIMIT 100",
         (rs, rowNum) -> orderRow(rs));
@@ -195,7 +194,7 @@ public class OrderingController {
 
   @PatchMapping("/admin/orders/{id}")
   public ApiResponse setOrderStatus(@PathVariable String id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     String status = stringValue(body.get("status"));
     if (!Arrays.asList(ORDER_STATUSES).contains(status)) return ApiResponse.error("订单状态无效");
     List<String> currentStatuses = jdbc.queryForList("SELECT status FROM orders WHERE id = ?", String.class, id);
@@ -210,7 +209,7 @@ public class OrderingController {
 
   @GetMapping("/admin/settings")
   public ApiResponse adminSettings(HttpServletRequest request) {
-    if (!requireAdmin(request)) return ApiResponse.error("管理端未授权，请联系管理员配置账号");
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("isOpen", storeIsOpen());
     return ApiResponse.ok(data);
@@ -239,7 +238,7 @@ public class OrderingController {
   }
 
   private boolean requireAdmin(HttpServletRequest request) {
-    return adminAccess.isConfigured() && adminAccess.isAuthorized(request);
+    return adminAccess.isAuthorized(request);
   }
 
   private List<Map<String, Object>> dishes(boolean onlyOnSale) {
