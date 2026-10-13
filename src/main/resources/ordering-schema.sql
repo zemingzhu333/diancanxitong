@@ -14,6 +14,14 @@ CREATE TABLE IF NOT EXISTS `dishes` (
   KEY `idx_dishes_category_sale` (`category`, `on_sale`, `sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `dish_categories` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_dish_categories_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` varchar(40) NOT NULL,
   `customer_openid` varchar(128) NOT NULL,
@@ -56,3 +64,6 @@ INSERT IGNORE INTO `dishes` (`id`, `category`, `name`, `description`, `price_cen
   ('d4', '涮煮好物', '鲜切雪花肥牛', '一份约 180g', 3200, '🥩'),
   ('d5', '涮煮好物', '手打虾滑', '鲜虾手打 · Q弹爽口', 2600, '🍤'),
   ('d6', '主食小吃', '手工红糖糍粑', '现炸外酥里糯', 1800, '🍡');
+
+INSERT IGNORE INTO `dish_categories` (`name`)
+SELECT DISTINCT TRIM(`category`) FROM `dishes` WHERE TRIM(`category`) <> '' ORDER BY TRIM(`category`);

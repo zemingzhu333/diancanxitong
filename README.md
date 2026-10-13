@@ -4,7 +4,7 @@
 
 ## 首次初始化
 
-1. 在服务所连接的 MySQL 数据库执行 `src/main/resources/ordering-schema.sql`。
+1. 新数据库执行 `src/main/resources/ordering-schema.sql`；已有数据库先执行 `src/main/resources/migration-dish-categories.sql`，再部署新的后端版本。
 2. 顾客端 AppID 为 `wx2cc993502d30608f`，管理端 AppID 为 `wx6af64e050bd8565d`；两者都须关联到该 CloudBase 环境。
 3. 后端管理员 API 会允许任何已登录的管理端小程序账号管理订单、菜品和门店，无需将 OpenID 加入 `ADMIN_OPENIDS`。
 4. `ADMIN_OPENIDS` 目前仅用于指定接收新订单订阅通知的 OpenID，多个接收人用英文逗号分隔；这不影响管理端登录和操作权限。

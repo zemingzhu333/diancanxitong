@@ -4,6 +4,7 @@ import com.tencent.wxcloudrun.config.ApiResponse;
 import com.tencent.wxcloudrun.service.AdminAccessGuard;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -43,7 +44,8 @@ public class OrderingController {
   public ApiResponse menu() {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("categories", jdbc.queryForList(
-        "SELECT category FROM dishes WHERE on_sale = 1 GROUP BY category ORDER BY MIN(sort_order), category", String.class));
+        "SELECT c.name FROM dish_categories c WHERE EXISTS (SELECT 1 FROM dishes d WHERE d.category = c.name AND d.on_sale = 1) ORDER BY c.id",
+        String.class));
     data.put("dishes", dishes(true));
     data.put("isOpen", storeIsOpen());
     return ApiResponse.ok(data);
@@ -145,6 +147,25 @@ public class OrderingController {
     return ApiResponse.ok(dishes(false));
   }
 
+  @GetMapping("/admin/categories")
+  public ApiResponse adminCategories(HttpServletRequest request) {
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
+    return ApiResponse.ok(jdbc.queryForList("SELECT name FROM dish_categories ORDER BY id", String.class));
+  }
+
+  @PostMapping("/admin/categories")
+  public ApiResponse createCategory(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+    if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
+    String name = stringValue(body.get("name")).trim();
+    if (name.isEmpty() || name.length() > 64) return ApiResponse.error("分类名称不能为空，且不能超过 64 个字符");
+    try {
+      jdbc.update("INSERT INTO dish_categories (name) VALUES (?)", name);
+    } catch (DuplicateKeyException exception) {
+      return ApiResponse.error("这个分类已经存在");
+    }
+    return ApiResponse.ok(name);
+  }
+
   @PostMapping("/admin/dishes")
   public ApiResponse createDish(@RequestBody Map<String, Object> body, HttpServletRequest request) {
     if (!requireAdmin(request)) return ApiResponse.error("请从已登录的管理端小程序访问");
@@ -154,6 +175,7 @@ public class OrderingController {
     int price = integerValue(body.get("price"), 0);
     if (name.isEmpty() || category.isEmpty() || price <= 0 || name.length() > 100 || category.length() > 64
         || stringValue(body.get("description")).length() > 255) return ApiResponse.error("菜名、分类、描述或价格不符合要求");
+    if (!categoryExists(category)) return ApiResponse.error("请选择已有菜品分类");
     jdbc.update("INSERT INTO dishes (id, category, name, description, price_cents, emoji, cover, on_sale) VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
         id, category, name, stringValue(body.get("description")), price,
         defaultValue(body.get("emoji"), "🍲"), nullableString(body.get("cover")));
@@ -168,6 +190,7 @@ public class OrderingController {
     int price = integerValue(body.get("price"), 0);
     if (name.isEmpty() || category.isEmpty() || price <= 0 || name.length() > 100 || category.length() > 64
         || stringValue(body.get("description")).length() > 255) return ApiResponse.error("菜名、分类、描述或价格不符合要求");
+    if (!categoryExists(category)) return ApiResponse.error("请选择已有菜品分类");
     int changed = jdbc.update("UPDATE dishes SET category = ?, name = ?, description = ?, price_cents = ?, emoji = ?, cover = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         category, name, stringValue(body.get("description")), price,
         defaultValue(body.get("emoji"), "🍲"), nullableString(body.get("cover")), id);
@@ -302,6 +325,11 @@ public class OrderingController {
     } catch (EmptyResultDataAccessException exception) {
       return true;
     }
+  }
+
+  private boolean categoryExists(String category) {
+    Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dish_categories WHERE name = ?", Integer.class, category);
+    return count != null && count > 0;
   }
 
   private String stringValue(Object value) {
